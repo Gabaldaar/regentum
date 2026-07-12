@@ -4,7 +4,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, User, Auth, getAuth } from 'firebase/auth';
-import { getFirestore, collection, query, where, doc, Firestore, getDocs, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, doc, Firestore, getDocs, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { firebaseConfig } from '@/lib/firebase';
 import { Provider, UserRole } from '@/lib/data';
 
@@ -145,6 +145,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
               if (allUserDocs.length === 1) {
                   const userData = allUserDocs[0];
+                  
+                  // MIGRACIÓN/VINCULACIÓN: Si la ID no coincide con su uid de Auth, la migramos para que las reglas de Firebase funcionen
+                  if (userData.id !== firebaseUser.uid) {
+                      console.log(`[AUTH] Migrando perfil de socio/proveedor de ID ${userData.id} a UID ${firebaseUser.uid}`);
+                      const newDocRef = doc(db, 'providers', firebaseUser.uid);
+                      const oldDocRef = doc(db, 'providers', userData.id);
+                      
+                      const migratedData = {
+                          ...userData,
+                          id: firebaseUser.uid,
+                          userId: firebaseUser.uid, // Aseguramos vinculación
+                          updatedAt: new Date().toISOString()
+                      };
+                      
+                      try {
+                          // 1. Guardar el nuevo documento con el UID del usuario como ID
+                          await setDoc(newDocRef, migratedData);
+                          // 2. Eliminar el documento original con ID aleatorio
+                          await deleteDoc(oldDocRef);
+                          console.log(`[AUTH] Perfil migrado correctamente para ${firebaseUser.email}`);
+                          
+                          userData.id = firebaseUser.uid;
+                      } catch (err) {
+                          console.error("[AUTH] Error migrando perfil de proveedor:", err);
+                      }
+                  }
+
                   setOrgId(userData.orgId);
                   setAppUser(userData);
                   setActiveRole(prev => (prev === 'owner' ? 'owner' : userData.role));

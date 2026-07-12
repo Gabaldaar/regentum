@@ -97,10 +97,13 @@ export default function PropertiesPage() {
                 }
 
                 if (pp.estado === 'pendiente_ajuste') {
-                    const startDate = parseDateSafely(pp.fechaDesde);
-                    if (startDate && isBefore(startDate, nextMonthEnd)) {
-                        if (!nextAdj || isBefore(startDate, nextAdj)) {
-                            nextAdj = startDate;
+                    const contrato = allContratos.find(c => c.id === pp.contratoId);
+                    if (contrato && contrato.status === 'active') {
+                        const startDate = parseDateSafely(pp.fechaDesde);
+                        if (startDate && isBefore(startDate, nextMonthEnd)) {
+                            if (!nextAdj || isBefore(startDate, nextAdj)) {
+                                nextAdj = startDate;
+                            }
                         }
                     }
                 }

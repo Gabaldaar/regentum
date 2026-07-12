@@ -26,11 +26,19 @@ service cloud.firestore {
       return isSignedIn() && (docOrgId == userOrgId);
     }
 
-    // Reglas para la colección de proveedores (donde están los roles)
     match /providers/{document} {
-      // El Administrador Maestro puede leer perfiles para soporte, pero no editarlos si no son suyos
-      allow read: if isMasterAdmin() || (isSignedIn() && document == request.auth.uid);
-      allow write: if isSignedIn() && (document == request.auth.uid || isMasterAdmin());
+      // El Administrador Maestro puede leer perfiles para soporte.
+      // Permite leer y escribir si el ID de documento coincide con su UID, o si el email del
+      // documento coincide con el del usuario autenticado en Firebase (para vinculación inicial).
+      allow read, write: if isMasterAdmin() || (
+        isSignedIn() && (
+          document == request.auth.uid || 
+          (resource != null && 
+           'email' in resource.data && 
+           'email' in request.auth.token && 
+           resource.data.email.lower() == request.auth.token.email.lower())
+        )
+      );
     }
 
     // Reglas generales: ELIMINADO EL BYPASS DE MASTER ADMIN para evitar mezcla de datos
