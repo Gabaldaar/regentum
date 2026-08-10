@@ -83,7 +83,7 @@ export function ExpenseAddForm({
     currencySettings: initialCurrencySettings,
     lockAssignment = false
 }: {
-    assignment: TaskAssignment,
+    assignment?: TaskAssignment | null,
     categories: ExpenseCategory[],
     providers?: Provider[],
     properties?: Property[],
@@ -112,7 +112,7 @@ export function ExpenseAddForm({
   const [description, setDescription] = useState('');
   const [selectedProviderId, setSelectedProviderId] = useState<string>('none');
   const [currencySettings, setCurrencySettings] = useState<CurrencySettings | null>(initialCurrencySettings);
-  const [selectedAssignment, setSelectedAssignment] = useState<string>(assignment.id ? `${assignment.type}-${assignment.id}` : '');
+  const [selectedAssignment, setSelectedAssignment] = useState<string>(assignment?.id ? `${assignment.type}-${assignment.id}` : '');
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : internalIsOpen;
   const setIsOpen = propOnOpenChange !== undefined ? propOnOpenChange : setInternalIsOpen;
@@ -145,10 +145,10 @@ export function ExpenseAddForm({
     setAmount('');
     setDescription('');
     setSelectedProviderId('none');
-    setSelectedAssignment(assignment.id ? `${assignment.type}-${assignment.id}` : '');
+    setSelectedAssignment(assignment?.id ? `${assignment.type}-${assignment.id}` : '');
     setState(initialState);
     setIsFetchingRate(false);
-  }, [assignment.id, assignment.type]);
+  }, [assignment?.id, assignment?.type]);
 
   useEffect(() => {
     if (state.success) {
@@ -159,10 +159,10 @@ export function ExpenseAddForm({
   }, [state.success, onExpenseAdded, resetForm, setIsOpen]);
   
   useEffect(() => {
-    if (assignment.id) {
+    if (assignment?.id) {
         setSelectedAssignment(`${assignment.type}-${assignment.id}`);
     }
-  }, [assignment.type, assignment.id]);
+  }, [assignment?.type, assignment?.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -184,8 +184,8 @@ export function ExpenseAddForm({
             }
 
             if (preloadData) {
-                setAmount(preloadData.amount.toString());
-                setDescription(preloadData.description);
+                setAmount(preloadData.amount !== undefined && preloadData.amount !== null ? preloadData.amount.toString() : '');
+                setDescription(preloadData.description || '');
                 if (preloadData.providerId) {
                     setSelectedProviderId(preloadData.providerId);
                 } else {

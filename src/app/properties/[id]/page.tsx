@@ -985,6 +985,28 @@ export default function PropertyDetailPage() {
                 <OwnerLiquidationClient property={property} liquidations={data.ownerLiquidations || []} onDataChanged={handleDataChanged} />
             </TabsContent>
         </Tabs>
+
+        {expenseAssignment && (
+            <ExpenseAddForm
+                key={expenseAssignment ? `exp-form-${expenseAssignment.id}-${expensePreloadData?.taskId || 'new'}` : 'exp-form-empty'}
+                assignment={expenseAssignment}
+                categories={data.expenseCategories}
+                providers={data.providers}
+                properties={data.properties}
+                scopes={data.taskScopes}
+                onExpenseAdded={handleDataChanged}
+                isOpen={isExpenseAddOpen}
+                onOpenChange={(open) => {
+                    setIsExpenseAddOpen(open);
+                    if (!open) setExpenseAssignment(null);
+                }}
+                preloadData={expensePreloadData}
+                currencySettings={data.currencySettings}
+                lockAssignment={true}
+            >
+                <div className="hidden" />
+            </ExpenseAddForm>
+        )}
     </div>
   );
 }
