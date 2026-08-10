@@ -316,25 +316,38 @@ export default function ContratoDetailPage() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            {!isPaid && (
+                                            {(!isPaid || needsAdjustment || periodo.indiceAplicado) && (
                                                 <div className="space-y-2 pt-2 border-t">
-                                                    <Button 
-                                                        className={cn("w-full shadow-sm", (needsAdjustment || periodo.indiceAplicado) ? "bg-orange-600 hover:bg-orange-700" : "")} 
-                                                        size="sm" 
-                                                        onClick={() => (needsAdjustment || periodo.indiceAplicado) ? handleAdjustClick(periodo) : handlePayClick(periodo)}
-                                                    >
-                                                        {(needsAdjustment || periodo.indiceAplicado) ? <><TrendingUp className="mr-2 h-4 w-4" /> {periodo.indiceAplicado ? t('contratos.modify_adjustment') : t('contratos.apply_adjustment')}</> : t('contratos.register_payment')}
-                                                    </Button>
-                                                    {!(needsAdjustment || periodo.indiceAplicado) && (
+                                                    {needsAdjustment ? (
                                                         <Button 
-                                                            variant="outline" 
-                                                            className="w-full border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm" 
+                                                            className="w-full bg-orange-600 hover:bg-orange-700 shadow-sm" 
                                                             size="sm" 
                                                             onClick={() => handleAdjustClick(periodo)}
                                                         >
                                                             <TrendingUp className="mr-2 h-4 w-4" />
-                                                            {t('contratos.modify_amount')}
+                                                            {t('contratos.apply_adjustment')}
                                                         </Button>
+                                                    ) : (
+                                                        <>
+                                                            {!isPaid && (
+                                                                <Button 
+                                                                    className="w-full shadow-sm" 
+                                                                    size="sm" 
+                                                                    onClick={() => handlePayClick(periodo)}
+                                                                >
+                                                                    {t('contratos.register_payment')}
+                                                                </Button>
+                                                            )}
+                                                            <Button 
+                                                                variant="outline" 
+                                                                className="w-full border-orange-200 text-orange-700 hover:bg-orange-50 shadow-sm" 
+                                                                size="sm" 
+                                                                onClick={() => handleAdjustClick(periodo)}
+                                                            >
+                                                                <TrendingUp className="mr-2 h-4 w-4" />
+                                                                {periodo.indiceAplicado ? t('common.edit') : t('contratos.modify_amount')}
+                                                            </Button>
+                                                        </>
                                                     )}
                                                 </div>
                                             )}
@@ -379,27 +392,36 @@ export default function ContratoDetailPage() {
                                             <TableCell className="text-center">{getPeriodoStatusBadge(periodo.estado)}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {(needsAdjustment || periodo.indiceAplicado) ? (
+                                                    {needsAdjustment ? (
                                                         <Button variant="default" className="bg-orange-600 hover:bg-orange-700 h-8 px-3 text-xs shadow-sm" onClick={() => handleAdjustClick(periodo)}>
                                                             <TrendingUp className="mr-2 h-3 w-3" />
-                                                            {periodo.indiceAplicado ? t('common.edit') : t('contratos.apply_adjustment')}
+                                                            {t('contratos.apply_adjustment')}
                                                         </Button>
                                                     ) : (
-                                                        !isPaid && (
-                                                            <>
-                                                                <TooltipProvider>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger asChild>
-                                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-600" onClick={() => handleAdjustClick(periodo)}>
-                                                                                <TrendingUp className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent><p>{t('contratos.modify_amount')}</p></TooltipContent>
-                                                                    </Tooltip>
-                                                                </TooltipProvider>
+                                                        <>
+                                                            {periodo.indiceAplicado ? (
+                                                                <Button variant="default" className="bg-orange-600 hover:bg-orange-700 h-8 px-3 text-xs shadow-sm" onClick={() => handleAdjustClick(periodo)}>
+                                                                    <TrendingUp className="mr-2 h-3 w-3" />
+                                                                    {t('common.edit')}
+                                                                </Button>
+                                                            ) : (
+                                                                !isPaid && (
+                                                                    <TooltipProvider>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-600" onClick={() => handleAdjustClick(periodo)}>
+                                                                                    <TrendingUp className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent><p>{t('contratos.modify_amount')}</p></TooltipContent>
+                                                                        </Tooltip>
+                                                                    </TooltipProvider>
+                                                                )
+                                                            )}
+                                                            {!isPaid && (
                                                                 <Button variant="outline" size="sm" onClick={() => handlePayClick(periodo)} className="shadow-sm">{t('contratos.register_payment')}</Button>
-                                                            </>
-                                                        )
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             </TableCell>
