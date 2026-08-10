@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "periodosPago",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "contratoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "fechaDesde",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
