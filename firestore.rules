@@ -41,17 +41,38 @@ service cloud.firestore {
       );
     }
 
+    // Permitir lectura individual y firma digital pública de reservas y contratos
+    match /bookings/{bookingId} {
+      allow get: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tenantSignatureUrl', 'contractStatus']);
+    }
+
+    match /contratos/{contratoId} {
+      allow get: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tenantSignatureUrl', 'contractStatus']);
+    }
+
+    // Permitir lectura de propiedades e inquilinos individuales para renderizar el contrato público
+    match /properties/{propertyId} {
+      allow get: if true;
+    }
+
+    match /tenants/{tenantId} {
+      allow get: if true;
+    }
+
+    // Reglas específicas para configuraciones globales por organización
+    match /settings/{settingId} {
+       allow get: if true;
+       allow read, write: if isSignedIn();
+    }
+
     // Reglas generales: ELIMINADO EL BYPASS DE MASTER ADMIN para evitar mezcla de datos
     match /{collection}/{document} {
       allow read, write: if isSignedIn() && (
         canAccess(resource.data) ||
         canAccess(request.resource.data)
       );
-    }
-    
-    // Reglas específicas para configuraciones globales por organización
-    match /settings/{settingId} {
-       allow read, write: if isSignedIn();
     }
 
     // Reglas para telemetría del sistema (Solo Master Admin)
