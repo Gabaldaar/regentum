@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Download, Share, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -14,12 +15,17 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PwaSetup = () => {
+  const pathname = usePathname();
+  const isPublicPage = pathname?.startsWith('/sign/') || pathname?.startsWith('/unauthorized') || pathname?.includes('/print');
+
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
 
   useEffect(() => {
+    if (isPublicPage) return;
+
     // 1. Registro del Service Worker y detección de actualizaciones
     let handleControllerChange: () => void;
     let handleFocus: () => void;
@@ -106,7 +112,7 @@ const PwaSetup = () => {
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       }
     };
-  }, []);
+  }, [isPublicPage]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -123,6 +129,8 @@ const PwaSetup = () => {
     setShowPrompt(false);
     localStorage.setItem('pwa-prompt-dismissed', 'true');
   };
+
+  if (isPublicPage) return null;
 
   // Priorizamos mostrar la actualización antes que la invitación a instalar
   const showInstallBanner = showPrompt && !showUpdatePrompt;
