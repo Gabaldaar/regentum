@@ -23,7 +23,7 @@ import { BookingDeleteForm } from './booking-delete-form';
 import { NotesViewer } from './notes-viewer';
 import { GuaranteeManager } from './guarantee-manager';
 import { BookingDetailDialog } from './booking-detail-dialog';
-import { Pencil, Trash2, FileText, Calculator, Mail, PenLine, History, ShieldCheck, CalendarX } from 'lucide-react';
+import { Trash2, FileText, Calculator, Mail, History, ShieldCheck, CalendarX } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { EmailSender } from "./email-sender";
 import { PaymentAddForm, PaymentPreloadData } from "./payment-add-form";
@@ -147,24 +147,6 @@ export default function BookingsList({
                     <TooltipContent><p>{t('bookings.tooltips.email')}</p></TooltipContent>
                 </Tooltip>
 
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500" onClick={() => handleOpenWhatsAppSignature(booking)} disabled={isInactive}>
-                            <PenLine className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>{t('bookings.tooltips.signature')}</p></TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingBooking(booking)}>
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>{t('common.edit')}</p></TooltipContent>
-                </Tooltip>
-                
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeletingBooking(booking)}>
