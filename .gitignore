@@ -1,9 +1,11 @@
 # Dependencias
 /node_modules
+/functions/node_modules
 
 # Archivos de build y caché de Next.js
 /.next/
 /out/
+/.firebase/
 
 # Logs
 npm-debug.log*

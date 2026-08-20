@@ -724,7 +724,7 @@
       "credited": "Montant Crédité",
       "total_paid": "Total Payé",
       "balance": "Solde Restant",
-      "action_payment": "Enregistrer Paiement",
+      "action_payment": "Gérer Paiements",
       "action_signature": "Signature Numérique",
       "action_guarantee": "Garantie"
     }

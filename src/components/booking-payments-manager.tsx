@@ -38,9 +38,10 @@ interface BookingPaymentsManagerProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     onAddPaymentClick: () => void;
+    onPaymentActionComplete?: () => void;
 }
 
-export function BookingPaymentsManager({ bookingId, isOpen, onOpenChange, onAddPaymentClick }: BookingPaymentsManagerProps) {
+export function BookingPaymentsManager({ bookingId, isOpen, onOpenChange, onAddPaymentClick, onPaymentActionComplete }: BookingPaymentsManagerProps) {
   const { t } = useTranslation();
   const [payments, setPayments] = useState<PaymentWithDetails[]>([]);
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
@@ -111,6 +112,7 @@ export function BookingPaymentsManager({ bookingId, isOpen, onOpenChange, onAddP
 
   const handlePaymentAction = () => {
     fetchPaymentsAndBooking();
+    onPaymentActionComplete?.();
   };
 
   const openEmailSender = (payment: Payment) => {

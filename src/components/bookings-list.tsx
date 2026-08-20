@@ -23,7 +23,7 @@ import { BookingDeleteForm } from './booking-delete-form';
 import { NotesViewer } from './notes-viewer';
 import { GuaranteeManager } from './guarantee-manager';
 import { BookingDetailDialog } from './booking-detail-dialog';
-import { Landmark, Pencil, Trash2, FileText, Calculator, Mail, PenLine, History, ShieldCheck, CalendarX } from 'lucide-react';
+import { Pencil, Trash2, FileText, Calculator, Mail, PenLine, History, ShieldCheck, CalendarX } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { EmailSender } from "./email-sender";
 import { PaymentAddForm, PaymentPreloadData } from "./payment-add-form";
@@ -138,15 +138,6 @@ export default function BookingsList({
                     </Tooltip>
                 )}
 
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => setPaymentsBooking(booking)} disabled={isInactive}>
-                            <Landmark className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>{t('bookings.tooltips.payments')}</p></TooltipContent>
-                </Tooltip>
-                
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEmailBooking(booking)} disabled={isInactive || !booking.tenant?.email}>
@@ -363,6 +354,7 @@ export default function BookingsList({
                     setAddingPaymentForBooking(paymentsBooking); 
                     setIsAddPaymentOpen(true); 
                 }} 
+                onPaymentActionComplete={onDataChanged}
             />
         )}
 
@@ -400,8 +392,7 @@ export default function BookingsList({
                 onOpenChange={(o) => !o && setDetailBooking(null)}
                 onEdit={(b) => setEditingBooking(b)}
                 onPayment={(b) => {
-                    setAddingPaymentForBooking(b);
-                    setIsAddPaymentOpen(true);
+                    setPaymentsBooking(b);
                 }}
                 onSignature={(b) => handleOpenWhatsAppSignature(b)}
                 onGuarantee={(b) => setGuaranteeBooking(b)}

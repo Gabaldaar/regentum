@@ -714,7 +714,7 @@
       "credited": "Credited Amount",
       "total_paid": "Total Paid",
       "balance": "Pending Balance",
-      "action_payment": "Record Payment",
+      "action_payment": "Manage Payments",
       "action_signature": "Digital Signature",
       "action_guarantee": "Guarantee"
     }

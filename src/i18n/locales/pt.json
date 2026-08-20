@@ -714,7 +714,7 @@
       "credited": "Valor Creditado",
       "total_paid": "Total Pago",
       "balance": "Saldo Pendente",
-      "action_payment": "Registrar Pagamento",
+      "action_payment": "Gerenciar Pagamentos",
       "action_signature": "Assinatura Digital",
       "action_guarantee": "Garantia"
     }

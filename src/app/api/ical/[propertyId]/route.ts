@@ -1,42 +1,64 @@
-import { getBookingsByPropertyId, getPropertyById, getTenantById, getDateBlocksByPropertyId, Tenant, getContratosByPropertyId } from '@/lib/data';
 import { NextRequest } from 'next/server';
 import { format, addDays } from 'date-fns';
+import { getDb } from '@/lib/firebase/admin';
 
 function formatICalDate(date: Date): string {
-    // Format for an all-day event: YYYYMMDD
     return date.toISOString().split('T')[0].replace(/-/g, '');
+}
+
+function escapeICalText(text: string): string {
+    if (!text) return '';
+    return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n').replace(/\r/g, '');
 }
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { propertyId: string } }
 ) {
-  const propertyId = params.propertyId;
+  let propertyId = params.propertyId;
+
+  // Permitir extensión .ics al final para pasar las validaciones estrictas de Booking.com
+  if (propertyId.endsWith('.ics')) {
+      propertyId = propertyId.slice(0, -4);
+  }
 
   if (!propertyId) {
     return new Response('Property ID is required', { status: 400 });
   }
 
   try {
-    const property = await getPropertyById(propertyId);
+    const db = getDb();
+    const propertySnap = await db.collection('properties').doc(propertyId).get();
 
-    if (!property) {
+    if (!propertySnap.exists) {
       return new Response('Property not found', { status: 404 });
     }
 
+    const property = propertySnap.data() as any;
     const orgId = property.orgId;
 
-    const [bookings, blocks, contratos] = await Promise.all([
-      getBookingsByPropertyId(propertyId, orgId),
-      getDateBlocksByPropertyId(propertyId, orgId),
-      getContratosByPropertyId(propertyId, orgId)
+    const [bookingsSnap, blocksSnap, contratosSnap] = await Promise.all([
+      db.collection('bookings').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get(),
+      db.collection('dateBlocks').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get(),
+      db.collection('contratos').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get()
     ]);
 
+    const bookings = bookingsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+    const blocks = blocksSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+    const contratos = contratosSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
     const tenantIds = [...new Set([...bookings.map(b => b.tenantId), ...contratos.map(c => c.tenantId)])];
-    const tenants = await Promise.all(tenantIds.map(id => getTenantById(id)));
-    const tenantsMap = new Map(
-        tenants.filter((t): t is Tenant => !!t).map(t => [t.id, t])
-    );
+    const tenantsMap = new Map();
+    
+    if (tenantIds.length > 0) {
+        await Promise.all(tenantIds.map(async (tid) => {
+            if (!tid) return;
+            const tSnap = await db.collection('tenants').doc(tid).get();
+            if (tSnap.exists) {
+                tenantsMap.set(tid, { id: tSnap.id, ...tSnap.data() });
+            }
+        }));
+    }
 
     const events: string[] = [];
 
@@ -49,12 +71,8 @@ export async function GET(
         const tenant = tenantsMap.get(booking.tenantId);
         const tenantName = tenant ? tenant.name : 'Inquilino Desconocido';
         
-        // The day of check-in should be available for a new booking in the morning.
-        // Therefore, the iCal event should start blocking from the day AFTER check-in.
+        // El usuario solicitó mantener la lógica original de sumar 1 día al check-in
         const startBlockingDate = addDays(new Date(booking.startDate), 1);
-        
-        // The day of check-out should also be available for a new booking in the afternoon.
-        // The iCal DTEND is exclusive, so setting it to the check-out day makes that day available.
         const endBlockingDate = new Date(booking.endDate);
         const eventUID = `${booking.id}@adm.com`;
 
@@ -64,8 +82,8 @@ export async function GET(
         `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}`,
         `DTSTART;VALUE=DATE:${formatICalDate(startBlockingDate)}`,
         `DTEND;VALUE=DATE:${formatICalDate(endBlockingDate)}`,
-        `SUMMARY:Reserva - ${tenantName}`,
-        `DESCRIPTION:Reserva para ${tenantName}. Check-in el ${format(new Date(booking.startDate), 'yyyy-MM-dd')}, Check-out el ${format(new Date(booking.endDate), 'yyyy-MM-dd')}.`,
+        `SUMMARY:${escapeICalText(`Reserva - ${tenantName}`)}`,
+        `DESCRIPTION:${escapeICalText(`Reserva para ${tenantName}. Check-in el ${format(new Date(booking.startDate), 'yyyy-MM-dd')}, Check-out el ${format(new Date(booking.endDate), 'yyyy-MM-dd')}.`)}`,
         `END:VEVENT`
         );
     });
@@ -88,9 +106,9 @@ export async function GET(
         `UID:${eventUID}`,
         `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}`,
         `DTSTART;VALUE=DATE:${formatICalDate(startDate)}`,
-        `DTEND;VALUE=DATE:${formatICalDate(addDays(endDate, 1))}`, // DTEND is exclusive
-        `SUMMARY:Contrato de Locación - ${tenantName}`,
-        `DESCRIPTION:Alquiler a largo plazo para ${tenantName}.`,
+        `DTEND;VALUE=DATE:${formatICalDate(addDays(endDate, 1))}`,
+        `SUMMARY:${escapeICalText(`Contrato de Locación - ${tenantName}`)}`,
+        `DESCRIPTION:${escapeICalText(`Alquiler a largo plazo para ${tenantName}.`)}`,
         `END:VEVENT`
         );
     });
@@ -98,7 +116,6 @@ export async function GET(
     // Process Date Blocks
     blocks.forEach(block => {
         const startDate = new Date(block.startDate);
-        // For iCal all-day events, DTEND is exclusive. Add one day to block the full range including the end date.
         const endDate = addDays(new Date(block.endDate), 1);
         const eventUID = `block-${block.id}@adm.com`;
         const summary = `Bloqueado - ${block.reason || 'No Disponible'}`;
@@ -109,20 +126,21 @@ export async function GET(
         `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}`,
         `DTSTART;VALUE=DATE:${formatICalDate(startDate)}`,
         `DTEND;VALUE=DATE:${formatICalDate(endDate)}`,
-        `SUMMARY:${summary}`,
-        `DESCRIPTION:Período no disponible. Razón: ${block.reason || 'No especificada'}.`,
+        `SUMMARY:${escapeICalText(summary)}`,
+        `DESCRIPTION:${escapeICalText(`Período no disponible. Razón: ${block.reason || 'No especificada'}.`)}`,
         `END:VEVENT`
         );
     });
 
-    const safeFilename = property.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const safeFilename = property.name ? property.name.replace(/[^a-zA-Z0-9]/g, '_') : 'propiedad';
 
     const iCalContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       `PRODID:-//AiresDeMiramar//GestorDeAlquileres//EN`,
-      `NAME:${property.name}`,
-      `X-WR-CALNAME:${property.name}`,
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      `X-WR-CALNAME:${escapeICalText(property.name || 'Propiedad')}`,
       ...events,
       'END:VCALENDAR',
     ].join('\r\n');
