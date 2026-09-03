@@ -18,6 +18,7 @@ import { TenantDetailsDialog } from "./tenant-details-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
 import { ContratoGuaranteeManager } from "./contrato-guarantee-manager";
+import { ContratoContractManager } from "./contrato-contract-manager";
 import { useTranslation } from "@/i18n/useTranslation";
 
 interface ContratosListProps {
@@ -47,6 +48,7 @@ export default function ContratosList({ contratos, properties, tenants, onDataCh
   const [deletingContrato, setDeletingContrato] = useState<ContratoWithDetails | null>(null);
   const [notesContrato, setNotesContrato] = useState<ContratoWithDetails | null>(null);
   const [guaranteeContrato, setGuaranteeContrato] = useState<ContratoWithDetails | null>(null);
+  const [contractContrato, setContractContrato] = useState<ContratoWithDetails | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
 
   useEffect(() => {
@@ -107,15 +109,6 @@ export default function ContratosList({ contratos, properties, tenants, onDataCh
   const renderActions = (c: ContratoWithDetails) => (
     <div className="flex flex-wrap items-center justify-end gap-1">
         <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-500" onClick={() => handleOpenWhatsAppSignature(c)}>
-                        <PenLine className="h-4 w-4"/>
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>{t('bookings.tooltips.signature')}</p></TooltipContent>
-            </Tooltip>
-
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-500" onClick={() => setGuaranteeContrato(c)}>
@@ -180,15 +173,21 @@ export default function ContratosList({ contratos, properties, tenants, onDataCh
                             <Badge className={cn("text-[10px] font-bold uppercase h-5", styles.badge)}>
                                 {t(`contratos.status.${status || 'active'}`)}
                             </Badge>
-                            <Link href={`/contract?id=${c.id}`} target="_blank">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setContractContrato(c);
+                                }}
+                            >
                                 <Badge variant="outline" className={cn(
-                                    "text-[9px] uppercase border-primary text-primary flex items-center gap-1 cursor-pointer",
+                                    "text-[9px] uppercase border-primary text-primary flex items-center gap-1 cursor-pointer hover:opacity-80 transition-all",
                                     c.contractStatus === 'signed' ? 'bg-blue-50 border-blue-200 text-blue-700' : ''
                                 )}>
                                     <ClipboardList className="h-3 w-3" />
                                     {t(`bookings.contract_status.${c.contractStatus || 'not_sent'}`)}
                                 </Badge>
-                            </Link>
+                            </button>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 space-y-4 flex-grow">
@@ -238,6 +237,15 @@ export default function ContratosList({ contratos, properties, tenants, onDataCh
         {deletingContrato && <ContratoDeleteForm contrato={deletingContrato} isOpen={!!deletingContrato} onOpenChange={(o: boolean) => !o && setDeletingContrato(null)} onActionComplete={onDataChanged} />}
         {notesContrato && <NotesViewer notes={notesContrato.notes} title={`${t('tenants.tooltips.view_notes')} - ${notesContrato.tenantName}`} isOpen={!!notesContrato} onOpenChange={(o: boolean) => !o && setNotesContrato(null)} />}
         {guaranteeContrato && <ContratoGuaranteeManager contrato={guaranteeContrato} isOpen={!!guaranteeContrato} onOpenChange={(o: boolean) => !o && setGuaranteeContrato(null)} onActionComplete={onDataChanged} />}
+        {contractContrato && (
+            <ContratoContractManager
+                contrato={contractContrato}
+                isOpen={!!contractContrato}
+                onOpenChange={(o: boolean) => !o && setContractContrato(null)}
+                onContractUpdated={onDataChanged}
+                onSignatureClick={(c) => handleOpenWhatsAppSignature(c)}
+            />
+        )}
         {selectedTenant && <TenantDetailsDialog tenant={selectedTenant} isOpen={!!selectedTenant} onOpenChange={(o: boolean) => !o && setSelectedTenant(null)} />}
     </div>
   );

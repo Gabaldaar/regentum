@@ -14,6 +14,8 @@ import { es, enUS, ptBR } from 'date-fns/locale';
 import { ContratoPaymentForm } from '@/components/contrato-payment-form';
 import { ContratoAdjustmentForm } from '@/components/contrato-adjustment-form';
 import { NotesViewer } from '@/components/notes-viewer';
+import { ContratoContractManager } from '@/components/contrato-contract-manager';
+import { useToast } from '@/components/ui/use-toast';
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Contrato, PeriodoPago, Property, Tenant, ContratoStatus, GuaranteeStatus } from "@/lib/data";
@@ -52,6 +54,8 @@ export default function ContratoDetailPage() {
     const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false);
     const [isAdjustmentFormOpen, setIsAdjustmentFormOpen] = useState(false);
     const [isNotesOpen, setIsNotesOpen] = useState(false);
+    const [isContractManagerOpen, setIsContractManagerOpen] = useState(false);
+    const { toast } = useToast();
 
     const { width } = useWindowSize();
     const isMobile = width !== undefined && width < 768;
@@ -151,6 +155,19 @@ export default function ContratoDetailPage() {
         const prevMonto = idx > 0 ? periodos[idx - 1].montoAjustado : contrato?.montoInicial;
         setBaseValueForAdjustment(prevMonto || periodo.montoAjustado);
         setIsAdjustmentFormOpen(true);
+    };
+
+    const handleOpenWhatsAppSignature = (c: ContratoWithDetails) => {
+        const tenantName = c.tenantName || '';
+        const signatureLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/sign/${c.id}`;
+        const message = t('bookings.whatsapp.signature_message').replace('{{name}}', tenantName).replace('{{link}}', signatureLink);
+        navigator.clipboard.writeText(message);
+        toast({ title: t('common.success'), description: t('bookings.tooltips.signature_copy_success') });
+        if (c.tenant?.phone) {
+            const countryCode = (c.tenant.countryCode || '+54').replace(/[^0-9]/g, '');
+            const sanitizedPhone = c.tenant.phone.replace(/[^0-9]/g, '');
+            window.open(`https://wa.me/${countryCode}${sanitizedPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        }
     };
 
     if (isLoading) {
@@ -256,9 +273,27 @@ export default function ContratoDetailPage() {
                         <ClipboardList className="h-5 w-5 text-muted-foreground mt-0.5" />
                         <div>
                             <p className="text-muted-foreground">Firma del Documento</p>
-                            <Badge variant="outline" className="mt-1">
-                                {contrato.contractStatus === 'signed' ? 'Documento Firmado' : 'Pendiente de Firma'}
-                            </Badge>
+                            <button
+                                type="button"
+                                onClick={() => setIsContractManagerOpen(true)}
+                            >
+                                <Badge 
+                                    variant="outline" 
+                                    className={cn(
+                                        "mt-1 cursor-pointer hover:opacity-80 transition-all select-none flex items-center gap-1",
+                                        contrato.contractStatus === 'signed' 
+                                            ? "border-green-500 text-green-700 bg-green-50/50" 
+                                            : contrato.contractStatus === 'sent'
+                                            ? "border-blue-500 text-blue-700 bg-blue-50/50"
+                                            : contrato.contractStatus === 'not_required'
+                                            ? "border-zinc-400 text-zinc-500 bg-zinc-50/50"
+                                            : "border-primary text-primary"
+                                    )}
+                                >
+                                    <FileText className="h-3 w-3" />
+                                    {t(`bookings.contract_status.${contrato.contractStatus || 'not_sent'}`)}
+                                </Badge>
+                            </button>
                         </div>
                     </div>
                 </CardContent>
@@ -461,6 +496,16 @@ export default function ContratoDetailPage() {
                     onOpenChange={setIsNotesOpen}
                     notes={contrato.notes}
                     title={`${t('tenants.tooltips.view_notes')} - ${contrato.tenant?.name || 'Inquilino'}`}
+                />
+            )}
+
+            {contrato && (
+                <ContratoContractManager
+                    contrato={contrato}
+                    isOpen={isContractManagerOpen}
+                    onOpenChange={setIsContractManagerOpen}
+                    onContractUpdated={fetchData}
+                    onSignatureClick={(c) => handleOpenWhatsAppSignature(c)}
                 />
             )}
         </div>
