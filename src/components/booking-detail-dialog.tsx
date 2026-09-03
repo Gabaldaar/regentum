@@ -32,12 +32,15 @@ import {
   DollarSign,
   MapPin,
   History,
+  FileDown,
+  FileText,
 } from 'lucide-react';
 import {
   BookingWithDetails,
   PaymentWithDetails,
   Origin,
   BookingStatus,
+  ContractStatus,
 } from '@/lib/data';
 import { format, differenceInDays, isWithinInterval, isPast, startOfToday, isSameDay } from 'date-fns';
 import { Locale } from 'date-fns';
@@ -47,6 +50,16 @@ import { db } from '@/lib/firebase';
 import { cn, parseDateSafely } from '@/lib/utils';
 import { useTranslation } from '@/i18n/useTranslation';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 interface BookingDetailDialogProps {
   booking: BookingWithDetails | null;
@@ -58,6 +71,7 @@ interface BookingDetailDialogProps {
   onSignature: (booking: BookingWithDetails) => void;
   onGuarantee: (booking: BookingWithDetails) => void;
   onEmail: (booking: BookingWithDetails) => void;
+  onUpdateContractStatus?: (bookingId: string, status: ContractStatus) => void;
 }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -81,6 +95,7 @@ export function BookingDetailDialog({
   onSignature,
   onGuarantee,
   onEmail,
+  onUpdateContractStatus,
 }: BookingDetailDialogProps) {
   const { t, language } = useTranslation();
   const [payments, setPayments] = useState<PaymentWithDetails[]>([]);
@@ -297,11 +312,75 @@ export function BookingDetailDialog({
                 </InfoRow>
               )}
               <InfoRow label={t('bookings.filters.contract')}>
-                <Link href={`/contract?id=${booking.id}`} target="_blank">
-                  <Badge variant="outline" className="border-primary text-primary text-[10px] cursor-pointer hover:bg-primary/10">
-                    {t(`bookings.contract_status.${booking.contractStatus || 'not_sent'}`)}
-                  </Badge>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "text-[10px] cursor-pointer hover:opacity-80 transition-all select-none flex items-center gap-1",
+                        booking.contractStatus === 'signed'
+                            ? "border-green-500 text-green-700 bg-green-50/50"
+                            : booking.contractStatus === 'sent'
+                            ? "border-blue-500 text-blue-700 bg-blue-50/50"
+                            : booking.contractStatus === 'not_required'
+                            ? "border-zinc-400 text-zinc-500 bg-zinc-50/50"
+                            : "border-primary text-primary"
+                      )}
+                    >
+                      <FileText className="h-3 w-3" />
+                      {t(`bookings.contract_status.${booking.contractStatus || 'not_sent'}`)}
+                    </Badge>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      {t('bookings.filters.contract')}
+                    </DropdownMenuLabel>
+                    
+                    <DropdownMenuItem 
+                      onClick={() => window.open(`/contract?id=${booking.id}`, '_blank')}
+                      className="cursor-pointer"
+                    >
+                      <FileDown className="h-4 w-4 mr-2 text-primary" />
+                      <span>Enviar PDF</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        onOpenChange(false);
+                        onSignature(booking);
+                      }}
+                      className="cursor-pointer"
+                      disabled={isInactive}
+                    >
+                      <PenLine className="h-4 w-4 mr-2 text-blue-600" />
+                      <span>Firma Digital</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Cambiar Estado
+                    </DropdownMenuLabel>
+                    
+                    <DropdownMenuRadioGroup 
+                      value={booking.contractStatus || 'not_sent'} 
+                      onValueChange={(val) => onUpdateContractStatus?.(booking.id, val as ContractStatus)}
+                    >
+                      <DropdownMenuRadioItem value="not_sent" className="text-xs cursor-pointer">
+                        {t('bookings.contract_status.not_sent')}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="sent" className="text-xs cursor-pointer">
+                        {t('bookings.contract_status.sent')}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="signed" className="text-xs cursor-pointer">
+                        {t('bookings.contract_status.signed')}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="not_required" className="text-xs cursor-pointer">
+                        {t('bookings.contract_status.not_required')}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </InfoRow>
               <InfoRow label={t('bookings.filters.guarantee')}>
                 <Badge variant="outline" className="border-orange-500 text-orange-700 text-[10px]">

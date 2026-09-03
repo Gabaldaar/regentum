@@ -10,7 +10,6 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookingWithDetails, Property, Tenant, Origin, Provider, TaskAssignment, BookingStatus } from "@/lib/data";
 import { format, isWithinInterval, isPast, startOfToday, differenceInDays, isSameDay } from 'date-fns';
 import { es, enUS, ptBR, fr } from 'date-fns/locale';
 import { cn, parseDateSafely } from "@/lib/utils";
@@ -23,7 +22,7 @@ import { BookingDeleteForm } from './booking-delete-form';
 import { NotesViewer } from './notes-viewer';
 import { GuaranteeManager } from './guarantee-manager';
 import { BookingDetailDialog } from './booking-detail-dialog';
-import { Trash2, FileText, Calculator, Mail, History, ShieldCheck, CalendarX } from 'lucide-react';
+import { Trash2, FileText, Calculator, Mail, History, ShieldCheck, CalendarX, FileDown, PenLine } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { EmailSender } from "./email-sender";
 import { PaymentAddForm, PaymentPreloadData } from "./payment-add-form";
@@ -32,6 +31,18 @@ import { Dialog, DialogContent } from "./ui/dialog";
 import { TenantDetailsDialog } from "./tenant-details-dialog";
 import { useToast } from "./ui/use-toast";
 import { useTranslation } from "@/i18n/useTranslation";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
+import { updateBooking } from '@/lib/actions';
+import { BookingWithDetails, Property, Tenant, Origin, Provider, TaskAssignment, BookingStatus, ContractStatus } from "@/lib/data";
 
 interface BookingsListProps {
   bookings: BookingWithDetails[];
@@ -101,6 +112,24 @@ export default function BookingsList({
         const countryCode = (booking.tenant.countryCode || '+54').replace('+', '');
         const sanitizedPhone = booking.tenant.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${countryCode}${sanitizedPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    }
+  };
+
+  const handleUpdateContractStatus = async (bookingId: string, newStatus: ContractStatus) => {
+    try {
+      const formData = new FormData();
+      formData.append('id', bookingId);
+      formData.append('contractStatus', newStatus);
+      const res = await updateBooking({}, formData);
+      if (res.success) {
+        toast({ title: t('common.success'), description: 'Estado del contrato actualizado.' });
+        onDataChanged?.();
+      } else {
+        toast({ variant: 'destructive', title: t('common.error'), description: res.message });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: t('common.error'), description: 'No se pudo actualizar el estado del contrato.' });
     }
   };
 
@@ -252,12 +281,73 @@ export default function BookingsList({
                                     {origin.name}
                                 </Badge>
                             )}
-                            <Link href={`/contract?id=${b.id}`} target="_blank">
-                                <Badge variant="outline" className="h-5 text-[10px] border-primary text-primary">
-                                    {t(`bookings.contract_status.${b.contractStatus || 'not_sent'}`)}
-                                </Badge>
-                            </Link>
-                            <button onClick={() => !isCancelled && setGuaranteeBooking(b)}>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Badge 
+                                        variant="outline" 
+                                        className={cn(
+                                            "h-5 text-[10px] cursor-pointer hover:opacity-80 transition-all select-none flex items-center gap-1",
+                                            b.contractStatus === 'signed'
+                                                ? "border-green-500 text-green-700 bg-green-50/50"
+                                                : b.contractStatus === 'sent'
+                                                ? "border-blue-500 text-blue-700 bg-blue-50/50"
+                                                : b.contractStatus === 'not_required'
+                                                ? "border-zinc-400 text-zinc-500 bg-zinc-50/50"
+                                                : "border-primary text-primary"
+                                        )}
+                                    >
+                                        <FileText className="h-3 w-3" />
+                                        {t(`bookings.contract_status.${b.contractStatus || 'not_sent'}`)}
+                                    </Badge>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-56" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenuLabel className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                        {t('bookings.filters.contract')}
+                                    </DropdownMenuLabel>
+                                    
+                                    <DropdownMenuItem 
+                                        onClick={() => window.open(`/contract?id=${b.id}`, '_blank')}
+                                        className="cursor-pointer"
+                                    >
+                                        <FileDown className="h-4 w-4 mr-2 text-primary" />
+                                        <span>Enviar PDF</span>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem 
+                                        onClick={() => handleOpenWhatsAppSignature(b)}
+                                        className="cursor-pointer"
+                                        disabled={isCancelled}
+                                    >
+                                        <PenLine className="h-4 w-4 mr-2 text-blue-600" />
+                                        <span>Firma Digital</span>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                        Cambiar Estado
+                                    </DropdownMenuLabel>
+                                    
+                                    <DropdownMenuRadioGroup 
+                                        value={b.contractStatus || 'not_sent'} 
+                                        onValueChange={(val) => handleUpdateContractStatus(b.id, val as ContractStatus)}
+                                    >
+                                        <DropdownMenuRadioItem value="not_sent" className="text-xs cursor-pointer">
+                                            {t('bookings.contract_status.not_sent')}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="sent" className="text-xs cursor-pointer">
+                                            {t('bookings.contract_status.sent')}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="signed" className="text-xs cursor-pointer">
+                                            {t('bookings.contract_status.signed')}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="not_required" className="text-xs cursor-pointer">
+                                            {t('bookings.contract_status.not_required')}
+                                        </DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <button onClick={(e) => { e.stopPropagation(); !isCancelled && setGuaranteeBooking(b); }}>
                                 <Badge variant="outline" className="h-5 text-[10px] border-orange-500 text-orange-700">
                                     <ShieldCheck className="h-3 w-3 mr-1" />
                                     {t(`bookings.guarantee_status.${b.guaranteeStatus || 'not_solicited'}`)}
@@ -379,6 +469,7 @@ export default function BookingsList({
                 onSignature={(b) => handleOpenWhatsAppSignature(b)}
                 onGuarantee={(b) => setGuaranteeBooking(b)}
                 onEmail={(b) => setEmailBooking(b)}
+                onUpdateContractStatus={handleUpdateContractStatus}
             />
         )}
     </div>
