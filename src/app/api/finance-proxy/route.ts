@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // --- Configuration ---
-const API_BASE_URL = 'https://gestionomiscuentas.netlify.app';
+const API_BASE_URL = (process.env.FINANCE_API_BASE_URL || 'https://gestionomiscuentas.web.app').replace(/\/$/, '');
 
 export async function GET(request: Request) {
   try {

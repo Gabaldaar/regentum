@@ -492,8 +492,9 @@ export async function addPayment(ps: any, fd: FormData) {
   const billId = fd.get('billetera_id') as string;
 
   if (appFlavor === 'personal' && catId && ctaId && billId) {
-      // Usamos el proxy interno del servidor para no exponer la API key en el cliente
-      const FINANCE_API_URL = '/api/finance-proxy';
+      const FINANCE_API_BASE_URL = (process.env.FINANCE_API_BASE_URL || 'https://gestionomiscuentas.web.app').replace(/\/$/, '');
+      const FINANCE_API_KEY = process.env.FINANCE_API_KEY || '';
+      const endpoint = `${FINANCE_API_BASE_URL}/api/registrar-cobro`;
       
       // La API de finanzas requiere un datetime válido (ISO String completo)
       const validDate = date ? (date.includes('T') ? date : new Date(date).toISOString()) : new Date().toISOString();
@@ -515,10 +516,11 @@ export async function addPayment(ps: any, fd: FormData) {
       };
 
       try {
-          console.log("[FINANCE API] Sending registration request to proxy:", FINANCE_API_URL, JSON.stringify(externalData));
-          const response = await fetch(FINANCE_API_URL, {
+          console.log("[FINANCE API] Sending registration request to:", endpoint, JSON.stringify(externalData));
+          const response = await fetch(endpoint, {
               method: 'POST',
               headers: {
+                  'Authorization': `Bearer ${FINANCE_API_KEY}`,
                   'Content-Type': 'application/json'
               },
               body: JSON.stringify(externalData)
@@ -526,13 +528,13 @@ export async function addPayment(ps: any, fd: FormData) {
 
           if (!response.ok) {
               const errText = await response.text();
-              console.error(`[FINANCE API PROXY ERROR] Status ${response.status}: ${errText}`);
+              console.error(`[FINANCE API ERROR] Status ${response.status}: ${errText}`);
           } else {
               const resData = await response.json();
-              console.log("[FINANCE API PROXY SUCCESS] Response:", JSON.stringify(resData));
+              console.log("[FINANCE API SUCCESS] Response:", JSON.stringify(resData));
           }
       } catch (err) {
-          console.error("[FINANCE API PROXY NETWORK ERROR]", err);
+          console.error("[FINANCE API NETWORK ERROR]", err);
       }
   }
 
