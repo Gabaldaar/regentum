@@ -492,9 +492,7 @@ export async function addPayment(ps: any, fd: FormData) {
   const billId = fd.get('billetera_id') as string;
 
   if (appFlavor === 'personal' && catId && ctaId && billId) {
-      const FINANCE_API_BASE_URL = (process.env.FINANCE_API_BASE_URL || 'https://gestionomiscuentas.web.app').replace(/\/$/, '');
-      const FINANCE_API_KEY = process.env.FINANCE_API_KEY || '';
-      const endpoint = `${FINANCE_API_BASE_URL}/api/registrar-cobro`;
+      const endpoint = '/api/finance-proxy';
       
       // La API de finanzas requiere un datetime válido (ISO String completo)
       const validDate = date ? (date.includes('T') ? date : new Date(date).toISOString()) : new Date().toISOString();
@@ -517,11 +515,10 @@ export async function addPayment(ps: any, fd: FormData) {
 
       let financeSyncMessage = '';
       try {
-          console.log("[FINANCE API] Sending registration request to:", endpoint, JSON.stringify(externalData));
+          console.log("[FINANCE API] Sending registration request via proxy:", endpoint, JSON.stringify(externalData));
           const response = await fetch(endpoint, {
               method: 'POST',
               headers: {
-                  'Authorization': `Bearer ${FINANCE_API_KEY}`,
                   'Content-Type': 'application/json'
               },
               body: JSON.stringify(externalData)
