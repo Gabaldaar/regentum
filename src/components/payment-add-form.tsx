@@ -47,9 +47,9 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTranslation } from "@/i18n/useTranslation";
 
-export interface Categoria { id: string; nombre: string; }
+export interface Categoria { id: string; nombre: string; propertyIds?: string[]; }
 export interface Cuenta { id: string; nombre: string; }
-export interface Billetera { id: string; nombre: string; }
+export interface Billetera { id: string; nombre: string; currency?: string; propertyIds?: string[]; }
 export interface DatosImputacion {
     categorias: Categoria[];
     cuentas: Cuenta[];
@@ -139,6 +139,43 @@ export function PaymentAddForm({
   const [booking, setBooking] = useState<BookingWithDetails | null>(initialBooking || null);
   const [dollarRateForBalance, setDollarRateForBalance] = useState<number | null>(null);
   const [currencySettings, setCurrencySettings] = useState<CurrencySettings | null>(null);
+
+  // Filtrado en cascada según la Cuenta de Imputación seleccionada
+  const filteredCategorias = useMemo(() => {
+    if (!datosImputacion?.categorias) return [];
+    if (!cuentaId) return [];
+    return datosImputacion.categorias.filter(cat => 
+      !cat.propertyIds || cat.propertyIds.length === 0 || cat.propertyIds.includes(cuentaId)
+    );
+  }, [datosImputacion, cuentaId]);
+
+  const filteredBilleteras = useMemo(() => {
+    if (!datosImputacion?.billeteras) return [];
+    if (!cuentaId) return [];
+    return datosImputacion.billeteras.filter(bill => {
+      const matchesAccount = !bill.propertyIds || bill.propertyIds.length === 0 || bill.propertyIds.includes(cuentaId);
+      const matchesCurrency = !bill.currency || !currency || bill.currency.toUpperCase() === currency.toUpperCase();
+      return matchesAccount && matchesCurrency;
+    });
+  }, [datosImputacion, cuentaId, currency]);
+
+  const handleCuentaChange = (newCuentaId: string) => {
+    setCuentaId(newCuentaId);
+    // Si la categoría actual ya no pertenece a la nueva cuenta, resetearla
+    if (categoriaId) {
+      const currentCat = datosImputacion?.categorias.find(c => c.id === categoriaId);
+      if (currentCat && currentCat.propertyIds && currentCat.propertyIds.length > 0 && !currentCat.propertyIds.includes(newCuentaId)) {
+        setCategoriaId('');
+      }
+    }
+    // Si la billetera actual ya no pertenece a la nueva cuenta o moneda, resetearla
+    if (billeteraId) {
+      const currentBill = datosImputacion?.billeteras.find(b => b.id === billeteraId);
+      if (currentBill && currentBill.propertyIds && currentBill.propertyIds.length > 0 && !currentBill.propertyIds.includes(newCuentaId)) {
+        setBilleteraId('');
+      }
+    }
+  };
   
   const executeFormAction = useCallback(() => {
     if (!formRef.current) return;
@@ -485,39 +522,64 @@ export function PaymentAddForm({
                 )}
                 {datosImputacion && (
                   <div className="grid gap-3 p-3 bg-background/50 rounded-xl border border-dashed">
+                    {/* 1. Cuenta de Imputación */}
                     <div className="grid gap-1">
-                      <Label htmlFor="categoria_id" className="text-[9px] uppercase font-black text-muted-foreground">Categoría</Label>
-                      <Select
-                        value={categoriaId}
-                        onValueChange={setCategoriaId}
-                      >
-                        <SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                        <SelectContent>
-                          {datosImputacion.categorias.map(cat => (<SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-1">
-                      <Label htmlFor="cuenta_id" className="text-[9px] uppercase font-black text-muted-foreground">Cuenta de Imputación</Label>
+                      <Label htmlFor="cuenta_id" className="text-[9px] uppercase font-black text-muted-foreground">
+                        1. Cuenta de Imputación
+                      </Label>
                       <Select
                         value={cuentaId}
-                        onValueChange={setCuentaId}
+                        onValueChange={handleCuentaChange}
                       >
-                        <SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Seleccionar cuenta..." /></SelectTrigger>
                         <SelectContent>
                           {datosImputacion.cuentas.map(cta => (<SelectItem key={cta.id} value={cta.id}>{cta.nombre}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* 2. Categoría (filtrada por cuenta seleccionada) */}
                     <div className="grid gap-1">
-                      <Label htmlFor="billetera_id" className="text-[9px] uppercase font-black text-muted-foreground">Billetera de Ingreso</Label>
+                      <Label htmlFor="categoria_id" className="text-[9px] uppercase font-black text-muted-foreground">
+                        2. Categoría
+                      </Label>
+                      <Select
+                        value={categoriaId}
+                        onValueChange={setCategoriaId}
+                        disabled={!cuentaId}
+                      >
+                        <SelectTrigger className="h-9 bg-background">
+                          <SelectValue placeholder={!cuentaId ? "Primero selecciona una cuenta..." : "Seleccionar categoría..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredCategorias.length === 0 ? (
+                            <SelectItem value="__none__" disabled>No hay categorías disponibles para esta cuenta</SelectItem>
+                          ) : (
+                            filteredCategorias.map(cat => (<SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 3. Billetera de Ingreso (filtrada por cuenta y moneda) */}
+                    <div className="grid gap-1">
+                      <Label htmlFor="billetera_id" className="text-[9px] uppercase font-black text-muted-foreground">
+                        3. Billetera de Ingreso
+                      </Label>
                       <Select
                         value={billeteraId}
                         onValueChange={setBilleteraId}
+                        disabled={!cuentaId}
                       >
-                        <SelectTrigger className="h-9 bg-background"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 bg-background">
+                          <SelectValue placeholder={!cuentaId ? "Primero selecciona una cuenta..." : "Seleccionar billetera..."} />
+                        </SelectTrigger>
                         <SelectContent>
-                          {datosImputacion.billeteras.map(bill => (<SelectItem key={bill.id} value={bill.id}>{bill.nombre}</SelectItem>))}
+                          {filteredBilleteras.length === 0 ? (
+                            <SelectItem value="__none__" disabled>No hay billeteras en {currency} para esta cuenta</SelectItem>
+                          ) : (
+                            filteredBilleteras.map(bill => (<SelectItem key={bill.id} value={bill.id}>{bill.nombre}</SelectItem>))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
