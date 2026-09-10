@@ -515,6 +515,7 @@ export async function addPayment(ps: any, fd: FormData) {
           id_externo: `regentum_${Date.now()}`
       };
 
+      let financeSyncMessage = '';
       try {
           console.log("[FINANCE API] Sending registration request to:", endpoint, JSON.stringify(externalData));
           const response = await fetch(endpoint, {
@@ -529,13 +530,19 @@ export async function addPayment(ps: any, fd: FormData) {
           if (!response.ok) {
               const errText = await response.text();
               console.error(`[FINANCE API ERROR] Status ${response.status}: ${errText}`);
+              financeSyncMessage = ' (No se pudo sincronizar con Finanzas)';
           } else {
               const resData = await response.json();
               console.log("[FINANCE API SUCCESS] Response:", JSON.stringify(resData));
+              financeSyncMessage = ' (Sincronizado con Finanzas)';
           }
       } catch (err) {
           console.error("[FINANCE API NETWORK ERROR]", err);
+          financeSyncMessage = ' (Error de conexión con Finanzas)';
       }
+
+      logEvent('payment_registered', { org_id: orgId, currency: physicalCurrency });
+      return { success: true, message: `Pago registrado con éxito${financeSyncMessage}.` };
   }
 
   logEvent('payment_registered', { org_id: orgId, currency: physicalCurrency });
