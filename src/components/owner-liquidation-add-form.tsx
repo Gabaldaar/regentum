@@ -171,11 +171,9 @@ export function OwnerLiquidationAddForm({ property, isOpen, onOpenChange, onActi
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent 
-              className="sm:max-w-5xl max-h-[90vh] p-0 overflow-hidden rounded-[2.5rem]"
-              onPointerDownOutside={(e) => e.preventDefault()}
-              onEscapeKeyDown={(e) => e.preventDefault()}
+              className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2rem]"
             >
-                <DialogHeader className="p-6 bg-background border-b relative z-10">
+                <DialogHeader className="p-6 bg-background border-b shrink-0 relative z-10">
                     <DialogTitle className="text-xl font-black uppercase italic tracking-tighter text-primary flex items-center gap-2">
                         <ScrollText className="h-5 w-5" />
                         {t('owner_liquidations.add_dialog.title')}
@@ -185,7 +183,7 @@ export function OwnerLiquidationAddForm({ property, isOpen, onOpenChange, onActi
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto px-6 py-8 shadow-inner bg-muted/30 border-y border-muted-foreground/10">
+                <div className="flex-1 overflow-y-auto min-h-0 px-6 py-8 shadow-inner bg-muted/30 border-y border-muted-foreground/10">
                     <div className="space-y-8">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 bg-background p-6 rounded-3xl border shadow-sm">
                             <div className="grid gap-1.5">
@@ -323,7 +321,7 @@ export function OwnerLiquidationAddForm({ property, isOpen, onOpenChange, onActi
                     </div>
                 </div>
 
-                <DialogFooter className="p-6 bg-background border-t">
+                <DialogFooter className="p-6 bg-background border-t shrink-0">
                     <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending} className="font-bold uppercase text-[10px] tracking-widest h-11">{t('common.cancel')}</Button>
                     <Button onClick={handleSubmit} disabled={isPending || (selectedPaymentIds.length === 0 && selectedExpenseIds.length === 0)} className="font-bold uppercase text-[10px] tracking-widest h-11 px-10 shadow-lg">
                         {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
