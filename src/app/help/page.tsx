@@ -17,8 +17,6 @@ import {
     Calendar, 
     Wrench, 
     BarChart3, 
-    MessageSquare, 
-    Bug, 
     Share2,
     ScrollText,
     ClipboardList,
@@ -945,27 +943,6 @@ export default function HelpPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-
-            <Card className="border-4 border-primary/20 bg-primary/5 rounded-3xl overflow-hidden mt-20 print:hidden">
-                <CardContent className="p-8 flex flex-col md:flex-row items-center gap-8">
-                    <div className="p-5 bg-primary text-white rounded-2xl shadow-xl shrink-0 animate-pulse">
-                        <MessageSquare className="h-10 w-10" />
-                    </div>
-                    <div className="flex-1 text-center md:text-left space-y-2">
-                        <h3 className="text-2xl font-black uppercase italic text-primary tracking-tight">{t('help.tester.title')}</h3>
-                        <p className="text-lg text-muted-foreground font-medium">{t('help.tester.desc').replace('{{name}}', appName)}</p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                        {adminContact.email && (
-                            <Button asChild className="font-black uppercase text-[11px] tracking-widest h-14 px-8 shadow-2xl rounded-2xl flex-1 sm:flex-none">
-                                <a href={`mailto:${adminContact.email}?subject=Reporte Error ${appName}`} target="_blank">
-                                    <Bug className="mr-2 h-5 w-5" /> {t('help.tester.report_error')}
-                                </a>
-                            </Button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     );
 }

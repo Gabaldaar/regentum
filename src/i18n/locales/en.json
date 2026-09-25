@@ -1047,7 +1047,8 @@
     "status": {
       "ok": "Confirmed",
       "confirmed": "Occupied",
-      "paid": "Paid"
+      "paid": "Paid",
+      "pending": "Pending"
     },
     "labels": {
       "net": "Net",

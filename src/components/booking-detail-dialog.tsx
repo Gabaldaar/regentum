@@ -65,11 +65,11 @@ interface BookingDetailDialogProps {
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex-shrink-0">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4 py-2 px-3 sm:px-4">
+      <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
         {label}
       </span>
-      <div className="text-sm font-medium text-right">{children}</div>
+      <div className="text-xs sm:text-sm font-medium text-left sm:text-right min-w-0 break-words">{children}</div>
     </div>
   );
 }
@@ -206,11 +206,11 @@ export function BookingDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 rounded-2xl">
         {/* ── HEADER ── */}
         <DialogHeader
           className={cn(
-            'p-6 pb-4 rounded-t-lg',
+            'p-4 sm:p-6 pb-4 rounded-t-2xl',
             isCurrent
               ? 'bg-green-500/10'
               : isCancelled
@@ -252,7 +252,7 @@ export function BookingDetailDialog({
           )}
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-5">
+        <div className="p-4 sm:p-6 pb-6 space-y-5">
           {/* ── DETALLE DE LA ESTADÍA ── */}
           <section>
             <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1.5">
@@ -261,22 +261,22 @@ export function BookingDetailDialog({
             </h3>
             <div className="rounded-lg border bg-muted/30 divide-y">
               <InfoRow label={t('bookings.table.stay')}>
-                <span>
-                  {formatDate(startDate)} → {formatDate(endDate)}
+                <span className="font-semibold text-xs sm:text-sm">
+                  {formatDate(startDate)} <span className="text-muted-foreground mx-0.5">→</span> {formatDate(endDate)}
                 </span>
               </InfoRow>
               <InfoRow label={t('bookings.table.nights')}>
                 <Badge variant="outline">{nights} {t('bookings.table.nights')}</Badge>
               </InfoRow>
               <InfoRow label={t('bookings.table.amount')}>
-                <span className="text-base font-bold">
+                <span className="text-sm sm:text-base font-bold">
                   {formatCurrency(booking.amount, bookingCurrency)}
                 </span>
               </InfoRow>
               <InfoRow label={t('bookings.table.balance')}>
                 <span
                   className={cn(
-                    'text-base font-black',
+                    'text-sm sm:text-base font-black',
                     booking.balance > 0.01 ? 'text-orange-600' : 'text-green-600'
                   )}
                 >
@@ -335,7 +335,7 @@ export function BookingDetailDialog({
               </InfoRow>
               {booking.notes && (
                 <InfoRow label={t('bookings.tooltips.notes')}>
-                  <span className="text-muted-foreground italic max-w-xs text-right text-xs leading-snug">
+                  <span className="text-muted-foreground italic text-xs leading-snug break-words">
                     {booking.notes}
                   </span>
                 </InfoRow>
@@ -362,13 +362,13 @@ export function BookingDetailDialog({
                 </p>
               </div>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
+              <div className="rounded-lg border overflow-x-auto w-full">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="text-[10px] uppercase font-bold py-2">{t('common.date')}</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold py-2">{t('tasks.table.description')}</TableHead>
-                      <TableHead className="text-[10px] uppercase font-bold py-2 text-right">
+                      <TableHead className="text-[10px] uppercase font-bold py-2 px-2 sm:px-4">{t('common.date')}</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold py-2 px-2 sm:px-4">{t('tasks.table.description')}</TableHead>
+                      <TableHead className="text-[10px] uppercase font-bold py-2 px-2 sm:px-4 text-right">
                         {t('bookings.detail_dialog.credited')} ({bookingCurrency})
                       </TableHead>
                     </TableRow>
@@ -376,10 +376,10 @@ export function BookingDetailDialog({
                   <TableBody>
                     {payments.map((p) => (
                       <TableRow key={p.id}>
-                        <TableCell className="text-xs py-2 whitespace-nowrap">
+                        <TableCell className="text-xs py-2 px-2 sm:px-4 whitespace-nowrap">
                           {formatDateShort(p.date)}
                         </TableCell>
-                        <TableCell className="text-xs py-2">
+                        <TableCell className="text-xs py-2 px-2 sm:px-4 break-words max-w-[140px]">
                           <p className="font-medium">{p.description || '—'}</p>
                           {p.receivedCurrency !== p.currency && (
                             <p className="text-[10px] text-muted-foreground italic">
@@ -387,7 +387,7 @@ export function BookingDetailDialog({
                             </p>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs py-2 text-right font-bold">
+                        <TableCell className="text-xs py-2 px-2 sm:px-4 text-right font-bold whitespace-nowrap">
                           {formatCurrency(p.amount, bookingCurrency)}
                         </TableCell>
                       </TableRow>
@@ -395,20 +395,20 @@ export function BookingDetailDialog({
                   </TableBody>
                   <TableFooter>
                     <TableRow>
-                      <TableCell colSpan={2} className="text-right text-xs font-bold py-2">
+                      <TableCell colSpan={2} className="text-right text-xs font-bold py-2 px-2 sm:px-4">
                         {t('bookings.detail_dialog.total_paid')}
                       </TableCell>
-                      <TableCell className="text-right font-bold text-xs py-2">
+                      <TableCell className="text-right font-bold text-xs py-2 px-2 sm:px-4 whitespace-nowrap">
                         {formatCurrency(totalPaid, bookingCurrency)}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={2} className="text-right text-xs font-bold py-2">
+                      <TableCell colSpan={2} className="text-right text-xs font-bold py-2 px-2 sm:px-4">
                         {t('bookings.detail_dialog.balance')}
                       </TableCell>
                       <TableCell
                         className={cn(
-                          'text-right font-black text-xs py-2',
+                          'text-right font-black text-xs py-2 px-2 sm:px-4 whitespace-nowrap',
                           booking.balance > 0.01 ? 'text-orange-600' : 'text-green-600'
                         )}
                       >
@@ -431,7 +431,7 @@ export function BookingDetailDialog({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Button
                 variant="outline"
-                className="flex flex-col h-auto py-3 gap-1.5 items-center"
+                className="flex flex-col h-auto py-2.5 sm:py-3 px-2 gap-1 sm:gap-1.5 items-center text-center"
                 onClick={() => {
                   onOpenChange(false);
                   onEdit(booking);
@@ -443,7 +443,7 @@ export function BookingDetailDialog({
 
               <Button
                 variant="outline"
-                className="flex flex-col h-auto py-3 gap-1.5 items-center text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
+                className="flex flex-col h-auto py-2.5 sm:py-3 px-2 gap-1 sm:gap-1.5 items-center text-center text-green-700 border-green-300 hover:bg-green-50 hover:text-green-800"
                 disabled={isInactive}
                 onClick={() => {
                   onOpenChange(false);
@@ -456,7 +456,7 @@ export function BookingDetailDialog({
 
               <Button
                 variant="outline"
-                className="flex flex-col h-auto py-3 gap-1.5 items-center text-blue-700 border-blue-300 hover:bg-blue-50 hover:text-blue-800"
+                className="flex flex-col h-auto py-2.5 sm:py-3 px-2 gap-1 sm:gap-1.5 items-center text-center text-blue-700 border-blue-300 hover:bg-blue-50 hover:text-blue-800"
                 disabled={isInactive}
                 onClick={() => {
                   onOpenChange(false);
@@ -469,7 +469,7 @@ export function BookingDetailDialog({
 
               <Button
                 variant="outline"
-                className="flex flex-col h-auto py-3 gap-1.5 items-center text-orange-700 border-orange-300 hover:bg-orange-50 hover:text-orange-800"
+                className="flex flex-col h-auto py-2.5 sm:py-3 px-2 gap-1 sm:gap-1.5 items-center text-center text-orange-700 border-orange-300 hover:bg-orange-50 hover:text-orange-800"
                 disabled={isCancelled}
                 onClick={() => {
                   onOpenChange(false);
@@ -485,15 +485,15 @@ export function BookingDetailDialog({
             {booking.tenant?.email && (
               <Button
                 variant="ghost"
-                className="w-full mt-2 text-muted-foreground hover:text-foreground"
+                className="w-full mt-2 text-muted-foreground hover:text-foreground text-xs h-auto py-2.5 px-2 break-all whitespace-normal text-center flex items-center justify-center gap-1.5"
                 disabled={isInactive}
                 onClick={() => {
                   onOpenChange(false);
                   onEmail(booking);
                 }}
               >
-                <Mail className="h-4 w-4 mr-2" />
-                {t('bookings.tooltips.email')} — {booking.tenant.email}
+                <Mail className="h-4 w-4 shrink-0" />
+                <span className="truncate max-w-full">{t('bookings.tooltips.email')} — {booking.tenant.email}</span>
               </Button>
             )}
           </section>

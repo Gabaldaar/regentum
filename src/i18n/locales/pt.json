@@ -1048,7 +1048,8 @@
     "status": {
       "ok": "Confirmado",
       "confirmed": "Ocupado",
-      "paid": "Pago"
+      "paid": "Pago",
+      "pending": "Pendente"
     },
     "labels": {
       "net": "Líquido",
