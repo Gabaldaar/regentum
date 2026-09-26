@@ -18,6 +18,7 @@ import {
     Wrench, 
     BarChart3, 
     Share2,
+    FileDown,
     ScrollText,
     ClipboardList,
     Copy,
@@ -161,7 +162,12 @@ export default function HelpPage() {
                     <h2 className="text-3xl font-bold tracking-tight text-primary">{t('help.title')}</h2>
                     <p className="text-muted-foreground">{t('help.description').replace('{{name}}', appName)}</p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <Button variant="default" size="sm" asChild className="flex-1 sm:flex-none gap-2 font-bold uppercase text-[10px] tracking-widest h-10 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground">
+                        <a href="/Manual_de_Usuario_Regentum.pdf" download="Manual_de_Usuario_Regentum.pdf" target="_blank" rel="noopener noreferrer">
+                            <FileDown className="h-4 w-4" /> Descargar Manual PDF
+                        </a>
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleStartTour} className="flex-1 sm:flex-none gap-2 font-bold uppercase text-[10px] tracking-widest border-primary/20 hover:bg-primary/5 h-10">
                         <Rocket className="h-4 w-4" /> {t('help.view_tour')}
                     </Button>
@@ -209,6 +215,20 @@ export default function HelpPage() {
                                         {chap.title}
                                     </button>
                                 ))}
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-2 hidden lg:block">
+                                <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+                                    <FileDown className="h-4 w-4" /> Manual en PDF
+                                </p>
+                                <p className="text-[10px] text-muted-foreground leading-snug">
+                                    Descarga la versión completa para leerla offline o imprimirla.
+                                </p>
+                                <Button variant="outline" size="sm" asChild className="w-full gap-2 font-bold uppercase text-[10px] tracking-wider border-primary/30 hover:bg-primary hover:text-white h-9">
+                                    <a href="/Manual_de_Usuario_Regentum.pdf" download="Manual_de_Usuario_Regentum.pdf" target="_blank" rel="noopener noreferrer">
+                                        <FileDown className="h-3.5 w-3.5" /> Descargar PDF
+                                    </a>
+                                </Button>
                             </div>
 
                             <div className="lg:hidden w-full">
