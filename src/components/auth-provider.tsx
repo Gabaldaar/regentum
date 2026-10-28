@@ -131,7 +131,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // BUSQUEDA POR EMAIL (RESPALDO)
-          const email = (firebaseUser.email || '').toLowerCase().trim();
+          let email = (firebaseUser.email || '').toLowerCase().trim();
+          if (!email && firebaseUser.providerData) {
+              for (const profile of firebaseUser.providerData) {
+                  if (profile.email) {
+                      email = profile.email.toLowerCase().trim();
+                      break;
+                  }
+              }
+          }
           if (email) {
               const qProviders = query(collection(db, 'providers'), where('email', '==', email));
               const providersSnap = await getDocs(qProviders);
