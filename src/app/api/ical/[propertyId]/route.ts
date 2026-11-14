@@ -2,6 +2,9 @@ import { NextRequest } from 'next/server';
 import { format, addDays } from 'date-fns';
 import { getDb } from '@/lib/firebase/admin';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 function formatICalDate(date: Date): string {
     return date.toISOString().split('T')[0].replace(/-/g, '');
 }
@@ -37,14 +40,24 @@ export async function GET(
     const property = propertySnap.data() as any;
     const orgId = property.orgId;
 
-    const [bookingsSnap, blocksSnap, contratosSnap] = await Promise.all([
+    const [bookingsSnap, blocksSnap, legacyBlocksSnap, contratosSnap] = await Promise.all([
       db.collection('bookings').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get(),
-      db.collection('dateBlocks').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get(),
+      db.collection('date_blocks').where('propertyId', '==', propertyId).get(),
+      db.collection('dateBlocks').where('propertyId', '==', propertyId).get(),
       db.collection('contratos').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get()
     ]);
 
     const bookings = bookingsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-    const blocks = blocksSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+    
+    // Unificar date_blocks y dateBlocks (por compatibilidad) evitando duplicados
+    const blocksMap = new Map<string, any>();
+    blocksSnap.docs.forEach(d => blocksMap.set(d.id, { id: d.id, ...d.data() }));
+    legacyBlocksSnap.docs.forEach(d => {
+      if (!blocksMap.has(d.id)) {
+        blocksMap.set(d.id, { id: d.id, ...d.data() });
+      }
+    });
+    const blocks = Array.from(blocksMap.values());
     const contratos = contratosSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
     const tenantIds = [...new Set([...bookings.map(b => b.tenantId), ...contratos.map(c => c.tenantId)])];
@@ -115,8 +128,10 @@ export async function GET(
     
     // Process Date Blocks
     blocks.forEach(block => {
+        if (!block.startDate || !block.endDate) return;
         const startDate = new Date(block.startDate);
         const endDate = addDays(new Date(block.endDate), 1);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return;
         const eventUID = `block-${block.id}@adm.com`;
         const summary = `Bloqueado - ${block.reason || 'No Disponible'}`;
         
@@ -150,6 +165,7 @@ export async function GET(
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
         'Content-Disposition': `attachment; filename="calendar_${safeFilename}.ics"`,
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
       },
     });
   } catch (error) {
