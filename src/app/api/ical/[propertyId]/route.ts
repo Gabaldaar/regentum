@@ -168,8 +168,8 @@ export async function GET(
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating iCal feed:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    return new Response(`Internal Server Error: ${error?.message || 'Unknown error'}`, { status: 500 });
   }
 }
