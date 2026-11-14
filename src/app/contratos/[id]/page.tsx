@@ -3,12 +3,13 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Loader2, ChevronLeft, User, Building2, Calendar, Wallet, FileText, Info, Notebook, ShieldCheck, ClipboardList, TrendingUp } from 'lucide-react';
+import { Loader2, ChevronLeft, User, Building2, Calendar, Wallet, FileText, Info, Notebook, ShieldCheck, ClipboardList, TrendingUp, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, parseDateSafely } from '@/lib/utils';
+import { deletePeriodoPago } from '@/lib/actions';
 import { format } from 'date-fns';
 import { es, enUS, ptBR } from 'date-fns/locale';
 import { ContratoPaymentForm } from '@/components/contrato-payment-form';
@@ -167,6 +168,22 @@ export default function ContratoDetailPage() {
             const countryCode = (c.tenant.countryCode || '+54').replace(/[^0-9]/g, '');
             const sanitizedPhone = c.tenant.phone.replace(/[^0-9]/g, '');
             window.open(`https://wa.me/${countryCode}${sanitizedPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+    };
+
+    const handleDeletePeriodo = async (periodo: PeriodoPago) => {
+        const periodLabel = formatDate(periodo.fechaDesde, "MMMM yyyy");
+        if (!window.confirm(`¿Estás seguro de que deseas eliminar la cuota de ${periodLabel}? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+        const fd = new FormData();
+        fd.append('periodoId', periodo.id);
+        const res = await deletePeriodoPago({}, fd);
+        if (res.success) {
+            toast({ title: t('common.success'), description: res.message });
+            fetchData();
+        } else {
+            toast({ title: 'Error', description: res.message, variant: 'destructive' });
         }
     };
 
@@ -382,6 +399,17 @@ export default function ContratoDetailPage() {
                                                                 <TrendingUp className="mr-2 h-4 w-4" />
                                                                 {periodo.indiceAplicado ? t('common.edit') : t('contratos.modify_amount')}
                                                             </Button>
+                                                            {!isPaid && (!periodo.montoPagado || periodo.montoPagado === 0) && (
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" 
+                                                                    onClick={() => handleDeletePeriodo(periodo)}
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Eliminar cuota
+                                                                </Button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
@@ -455,6 +483,23 @@ export default function ContratoDetailPage() {
                                                             )}
                                                             {!isPaid && (
                                                                 <Button variant="outline" size="sm" onClick={() => handlePayClick(periodo)} className="shadow-sm">{t('contratos.register_payment')}</Button>
+                                                            )}
+                                                            {!isPaid && (!periodo.montoPagado || periodo.montoPagado === 0) && (
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Button 
+                                                                                variant="ghost" 
+                                                                                size="icon" 
+                                                                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                                onClick={() => handleDeletePeriodo(periodo)}
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent><p>Eliminar cuota</p></TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
                                                             )}
                                                         </>
                                                     )}

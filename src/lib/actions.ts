@@ -19,7 +19,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { startOfMonth, endOfMonth, addMonths, differenceInCalendarMonths } from 'date-fns';
 import { logEvent } from './analytics';
-import { parseAssignment } from './utils';
+import { parseAssignment, parseDateSafely } from './utils';
 
 // Usamos el UID para evitar el escáner de secretos de Netlify.
 const MASTER_ADMIN_UID = 'ymBtFDZUWKR7VCxWNTHWflXc5mx1';
@@ -1026,6 +1026,10 @@ export async function addContrato(ps: any, fd: FormData) {
 
 export async function updateContrato(ps: any, fd: FormData) {
   const id = fd.get('id') as string;
+  const snap = await getDoc(doc(db, 'contratos', id));
+  if (!snap.exists()) return { success: false, message: 'Contrato no encontrado.' };
+  const currentData = snap.data();
+
   const data: any = {};
   const fields = ['tenantId', 'propertyId', 'fechaInicio', 'fechaFin', 'montoInicial', 'moneda', 'frecuenciaAjuste', 'diaVencimiento', 'notes', 'contractStatus', 'status', 'guaranteeStatus', 'montoGarantia', 'monedaGarantia', 'guaranteeReceivedDate', 'guaranteeReturnedDate'];
   
@@ -1038,8 +1042,101 @@ export async function updateContrato(ps: any, fd: FormData) {
     }
   });
 
-  await updateDoc(doc(db, 'contratos', id), data).catch(handleError(`contratos/${id}`, 'update', data));
+  const batch = writeBatch(db);
+
+  // Si se modificó la fecha de fin (por ejemplo terminación anticipada o prórroga)
+  if (data.fechaFin && currentData.fechaFin && data.fechaFin !== currentData.fechaFin) {
+    const oldEnd = parseDateSafely(currentData.fechaFin);
+    const newEnd = parseDateSafely(data.fechaFin);
+
+    if (newEnd && oldEnd) {
+      if (newEnd < oldEnd) {
+        // Terminación anticipada: eliminar cuotas que inician después de la nueva fecha de fin sin pagos
+        const periodosSnap = await getDocs(query(collection(db, 'periodosPago'), where('contratoId', '==', id)));
+        periodosSnap.docs.forEach(docSnap => {
+          const p = docSnap.data();
+          const pStart = parseDateSafely(p.fechaDesde);
+          if (pStart && pStart > newEnd && (!p.montoPagado || p.montoPagado === 0)) {
+            batch.delete(docSnap.ref);
+          }
+        });
+
+        // Si la nueva fecha de fin ya expiró y no se especificó otro estado, marcar finalizado
+        if (newEnd < new Date() && (!data.status || data.status === 'active')) {
+          data.status = 'ended';
+        }
+      } else if (newEnd > oldEnd) {
+        // Prórroga o extensión: crear cuotas faltantes
+        const orgId = currentData.orgId;
+        const pId = data.propertyId || currentData.propertyId;
+        const diaVencimiento = data.diaVencimiento !== undefined ? data.diaVencimiento : (currentData.diaVencimiento || 10);
+        const frecuenciaAjuste = data.frecuenciaAjuste !== undefined ? data.frecuenciaAjuste : (currentData.frecuenciaAjuste || 0);
+        const montoInicial = data.montoInicial !== undefined ? data.montoInicial : currentData.montoInicial;
+        const s = parseDateSafely(currentData.fechaInicio) || new Date();
+
+        const periodosSnap = await getDocs(query(collection(db, 'periodosPago'), where('contratoId', '==', id)));
+        let lastMonto = montoInicial;
+        let latestFechaDesde = oldEnd;
+        periodosSnap.docs.forEach(d => {
+          const p = d.data();
+          const pStart = parseDateSafely(p.fechaDesde);
+          if (pStart && (!latestFechaDesde || pStart > latestFechaDesde)) {
+            latestFechaDesde = pStart;
+            if (p.montoAjustado) lastMonto = p.montoAjustado;
+          }
+        });
+
+        let cur = addMonths(startOfMonth(oldEnd), 1);
+        const fin = startOfMonth(newEnd);
+        while (cur <= fin) {
+          const monthsDiff = differenceInCalendarMonths(cur, s);
+          const isAdj = (monthsDiff > 0 && frecuenciaAjuste > 0 && monthsDiff % frecuenciaAjuste === 0);
+          const pRef = doc(collection(db, 'periodosPago'));
+          const vencimiento = new Date(cur.getFullYear(), cur.getMonth(), diaVencimiento);
+
+          batch.set(pRef, {
+            orgId,
+            contratoId: id,
+            propertyId: pId,
+            fechaDesde: toDateString(startOfMonth(cur)),
+            fechaHasta: toDateString(endOfMonth(cur)),
+            fechaVencimiento: toDateString(vencimiento),
+            montoOriginal: montoInicial,
+            montoAjustado: lastMonto,
+            montoPagado: 0,
+            indiceAplicado: null,
+            estado: isAdj ? 'pendiente_ajuste' : 'pendiente'
+          });
+          cur = addMonths(cur, 1);
+        }
+
+        if (newEnd >= new Date() && currentData.status === 'ended' && !data.status) {
+          data.status = 'active';
+        }
+      }
+    }
+  }
+
+  batch.update(doc(db, 'contratos', id), data);
+  await batch.commit().catch(handleError(`contratos/${id}`, 'update', data));
   return { success: true, message: 'Contrato actualizado.' };
+}
+
+export async function deletePeriodoPago(ps: any, fd: FormData) {
+  const periodoId = fd.get('periodoId') as string;
+  if (!periodoId) return { success: false, message: 'ID de cuota requerido.' };
+  
+  const pRef = doc(db, 'periodosPago', periodoId);
+  const pSnap = await getDoc(pRef);
+  if (!pSnap.exists()) return { success: false, message: 'Cuota no encontrada.' };
+  
+  const pData = pSnap.data();
+  if (pData.montoPagado && pData.montoPagado > 0) {
+    return { success: false, message: 'No se puede eliminar una cuota con pagos registrados.' };
+  }
+  
+  await deleteDoc(pRef).catch(handleError(`periodosPago/${periodoId}`, 'delete'));
+  return { success: true, message: 'Cuota eliminada correctamente.' };
 }
 
 export async function deleteContrato(ps: any, fd: FormData) {
