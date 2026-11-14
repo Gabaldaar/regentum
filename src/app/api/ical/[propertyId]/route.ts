@@ -40,24 +40,22 @@ export async function GET(
     const property = propertySnap.data() as any;
     const orgId = property.orgId;
 
-    const [bookingsSnap, blocksSnap, legacyBlocksSnap, contratosSnap] = await Promise.all([
+    const [bookingsSnap, blocksSnap, contratosSnap] = await Promise.all([
       db.collection('bookings').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get(),
       db.collection('date_blocks').where('propertyId', '==', propertyId).get(),
-      db.collection('dateBlocks').where('propertyId', '==', propertyId).get(),
       db.collection('contratos').where('propertyId', '==', propertyId).where('orgId', '==', orgId).get()
     ]);
 
     const bookings = bookingsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-    
-    // Unificar date_blocks y dateBlocks (por compatibilidad) evitando duplicados
-    const blocksMap = new Map<string, any>();
-    blocksSnap.docs.forEach(d => blocksMap.set(d.id, { id: d.id, ...d.data() }));
-    legacyBlocksSnap.docs.forEach(d => {
-      if (!blocksMap.has(d.id)) {
-        blocksMap.set(d.id, { id: d.id, ...d.data() });
-      }
-    });
-    const blocks = Array.from(blocksMap.values());
+
+    // Si existen bloqueos en la colección principal date_blocks, se usan esos.
+    // Solo si no hay ninguno, se busca en dateBlocks (legado) para compatibilidad.
+    let rawBlocks = blocksSnap.docs;
+    if (rawBlocks.length === 0) {
+      const legacySnap = await db.collection('dateBlocks').where('propertyId', '==', propertyId).get();
+      rawBlocks = legacySnap.docs;
+    }
+    const blocks = rawBlocks.map(d => ({ id: d.id, ...d.data() })) as any[];
     const contratos = contratosSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
     const tenantIds = [...new Set([...bookings.map(b => b.tenantId), ...contratos.map(c => c.tenantId)])];
